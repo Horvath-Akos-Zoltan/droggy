@@ -26,9 +26,20 @@ canvas:not(#main) {
     position: fixed;
     right: 2.5px;
     top: 2.5px;
-    border: 0;
+    border: 2px solid white;
     border-radius: 5px;
     padding: 5px 10px;
     z-index: -2;
     cursor: pointer;
+    background-color: rgb(50, 50, 50);
+    color: white;
+    transition: background-color 0.125s ease;
+}
+
+#fullscreen:hover {
+    background-color: rgb(80, 80, 80);
+}
+
+#fullscreen:active {
+    background-color: rgb(20, 20, 20);
 }

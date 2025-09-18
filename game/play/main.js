@@ -1,15 +1,16 @@
 document.addEventListener("DOMContentLoaded", LateLoad);
 document.addEventListener("mousemove", (event) => {
-    mpos = new Vector(event.clientX, event.clientY).dev(Vector.as(window.innerWidth / c.width, window.innerHeight / c.height));
+    let b = c.getBoundingClientRect();
+    mpos = Vector.as((event.clientX - b.left) * (c.width / b.width), (event.clientY - b.top) * (c.height / b.height));
 })
 
 let mpos = Vector.null;
 
 const c = document.querySelector("canvas"), ctx = c.getContext("2d");
 
-let canvasSize = Vector.as(21, 16);
+let canvasSize = Vector.as(22, 16);
 
-let res = 1/4;
+let res = 1;
 
 /**
  * @example
@@ -151,8 +152,8 @@ function LoadCanvas() {
 }
 
 function ReloadCanvas() {
-    c.width = canvasSize.x * 16;
-    c.height = canvasSize.y * 16;
+    c.width = canvasSize.x * 16 * res;
+    c.height = canvasSize.y * 16 * res;
     let x = document.documentElement.clientWidth / c.width, y = document.documentElement.clientHeight / c.height;
     let z = Math.min(x, y);
     let padding = 0.3;
