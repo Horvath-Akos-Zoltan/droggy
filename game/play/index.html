@@ -3,16 +3,76 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="The game for the project Droggy">
+        <link rel="shortcut icon" href="./imgs/fella.png" type="image/x-icon">
         <link rel="stylesheet" href="styles.css">
         <script src="keys.js"></script>
         <script src="vector.js"></script>
-        <script src="managers.js"></script>
         <script src="classes.js"></script>
+        <script src="langs.js"></script>
+        <script src="randomWithSeed.js"></script>
+        <script defer src="../languageManager.js"></script>
         <script defer src="main.js"></script>
         <title>Droggy - Play</title>
     </head>
     <body>
-        <button id="fullscreen" onclick="ToggleFullscreen()">Q</button>
+        <iframe src="../navbar/index.html" frameborder="0"></iframe>
+        <button id="fullscreen" onclick="ToggleFullscreen()"><img src="imgs/fullscreen.png" alt="Fullscreen" width="32px" height="32px"></button>
         <canvas id="main"></canvas>
+        <div class="deathHolder">
+            <div class="death">
+                <h1 text="death"></h1>
+                <h2>
+                    <span text="eaten"></span><span id="deathCount">-69</span>
+                </h2>
+                <div class="btns">
+                    <button text="back" class="scclose" onclick="window.open('../', '_self')"></button>
+                    <button text="respawn" class="scdownload" onclick="Respawn()"></button>
+                </div>
+            </div>
+        </div>
+        <div class="screenshotholder">
+            <div class="screenshot">
+                <div id="btns">
+                    <button class="scclose" text="close" onclick="ToggleScreenshot()">close</button>
+                    <button class="scdownload" text="download" onclick="DownloadCanvasAsImage(Infinity)">download</button>
+                </div>
+                <div id="stop">
+                    <img src="imgs/none.png" alt="screenshot" id="screenshotImage" width="0" height="0">
+                </div>
+                <div class="title">
+                    <h2 text="screenshot">
+                        screenshot
+                    </h2>
+                </div>
+            </div>
+        </div>
+        <div class="droggopediaHolder">
+            <div class="droggopedia">
+                <div>Yummers</div>
+                <div class="items">
+
+                </div>
+                <div id="btns">
+                    <button text="close" class="scclose" onclick="ToggleDroggopedia()"></button>
+                </div>
+            </div>
+        </div>
+        <div class="escMenuHolder">
+            <div class="escMenu">
+                <h1 text="gamestopped"></h1>
+                <button text="folytatas" onclick="ToggleEscMenu()"></button>
+                <button text="restart" onclick="FullRestart()"></button>
+                <button text="droggopedia" onclick="ToggleDroggopedia(escMenuHolder);ToggleEscMenu();"></button>
+                <button text="screenshot" onclick="ToggleScreenshot(escMenuHolder, true);ToggleEscMenu();"></button>
+                <button text="documentation" onclick="window.open('../documentation/', '_self')"></button>
+                <button text="mainmenu" onclick="window.open('../', '_self')"></button>
+            </div>
+        </div>
+        <load>
+            <img src="./imgs/fullscreen.png" width="0" height="0">
+            <img src="./imgs/fullscreenClose.png" width="0" height="0">
+            <img src="./imgs/fullscreenF11.png" width="0" height="0">
+        </load>
     </body>
 </html>

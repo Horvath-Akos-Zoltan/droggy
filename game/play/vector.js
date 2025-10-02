@@ -1,11 +1,17 @@
-/** Version: 1.4
+/** Version: 1.6
+ * #
+ * Changes:
+ *  - static x, static y
+ *  - static random, static randomX, static randomY
+ *  - setLength, withLength
+ *  - get int
  * 
  * Created by NemGamingAkos
  * 
  * [ngakos.lol/libloader](https://www.ngakos.lol/libloader)
  * */
 class Vector {
-    constructor(x=0, y=0) {
+    constructor(x=0, y=x) {
         this.x = x;
         this.y = y;
     }
@@ -82,6 +88,10 @@ class Vector {
     get rounded() {
         return new Vector(Math.round(this.x), Math.round(this.y));
     }
+    /** Alias for Vector.rounded */
+    get int() {
+        return this.rounded;
+    }
     /** Math.floor */
     get floor() {
         return new Vector(Math.floor(this.x), Math.floor(this.y));
@@ -135,12 +145,35 @@ class Vector {
         return new Vector(0, 0)
     }
     /** Basically .new() */
-    static as(x=0, y=0) {
+    static as(x=0, y=x) {
         return new Vector(x, y);
     }
-    /** Négyzet grid */
+    /** 
+     * Négyzet grid 
+     * @deprecated the base class can now do the same
+     * */
     static grid(n=0) {
-        return Vector.as(n, n);
+        return new Vector(n, n);
+    }
+    /** Returns a new Vector with x being `x` and y being 0 */
+    static x(x = 0) {
+        return new Vector(x, 0);
+    }
+    /** Returns a new Vector with x being 0 and y being `y` */
+    static y(y = 0) {
+        return new Vector(0, y);
+    }
+    /** X and Y are random */
+    static random(min=0, max=1) {
+        return new Vector(Math.random() * (max - min) + min, Math.random() * (max - min) + min);
+    }
+    /** X is random, Y is 1*/
+    static randomX(min=0, max=1) {
+        return new Vector(Math.random() * (max - min) + min, 1);
+    }
+    /** X is 1, Y is random */
+    static randomY(min=0, max=1) {
+        return new Vector(1, Math.random() * (max - min) + min);
     }
     /** Returns the given degrees in radians 
      * @param {number} [fok=0] degrees
@@ -213,6 +246,14 @@ class Vector {
     normalize() {
         return this.setv(this.normalized);
     }
+    /** Sets the length of the vector to `n` */
+    setLength(n=1) {
+        return this.normalize().scale(n);
+    }
+    /** Returns the vector as if it's length was `n` */
+    withLength(n=1) {
+        return this.self.setLength(n);
+    }
     /** Méretezés */
     scale(n=1) {
         this.x *= n;
@@ -267,6 +308,10 @@ class Vector {
         if (!rad) val = (val % 360) * (Math.PI / 180);
         let cos = Math.cos(val), sin = Math.sin(val);
         return this.set(this.x * cos - this.y * sin, this.x * sin + this.y * cos);
+    }
+    /** Returns the vector as if it was rotated by `val` */
+    rotated(val, rad=true) {
+        return this.self.rotate(val, rad);
     }
     /** Értékek beállítása */
     set(x=0, y=0) {
@@ -370,6 +415,16 @@ class Vector {
     /** Returns how manyeth cell is this in */
     placeInGrid(n=16) {
         return this.deved(n).floor;
+    }
+    /** Rounds itself to the nearest values which are divisible by `n` */
+    roundToDivision(n=16) {
+        let diffX = this.x % n;
+        if (diffX < n / 2) this.x -= diffX
+        else this.x -= diffX - n;
+        let diffY = this.y % n;
+        if (diffY < n / 2) this.y -= diffY
+        else this.y -= diffY - n;
+        return this;
     }
     /** Vektor -> String */
     toString(split=";") {

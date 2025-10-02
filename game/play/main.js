@@ -1,16 +1,29 @@
 document.addEventListener("DOMContentLoaded", LateLoad);
 document.addEventListener("mousemove", (event) => {
-    let b = c.getBoundingClientRect();
-    mpos = Vector.as((event.clientX - b.left) * (c.width / b.width), (event.clientY - b.top) * (c.height / b.height));
-})
+    if (isStopped) return;
+    const b = c.getBoundingClientRect();
+    mpos = Vector.as((event.clientX - b.left) * (c.width / b.width), (event.clientY - b.top) * (c.height / b.height)).rounded;
+});
+document.addEventListener("wheel", (e) => {
+    if (e.deltaY > 0) player.scroll(1);
+    else player.scroll(-1);
+});
 
 let mpos = Vector.null;
+const params = new URLSearchParams(location.search);
+let extensiveLogging = params.get("log") != null;
 
 const c = document.querySelector("canvas"), ctx = c.getContext("2d");
+c.addEventListener("contextmenu", (e) => e.preventDefault());
 
-let canvasSize = Vector.as(22, 16);
+let canvasSize = Vector.as(21, 16);
 
-let res = 1;
+let res = 1/4;
+
+let deltaTime = 0;
+let lastTime = Date.now();
+
+let isStopped = false;
 
 /**
  * @example
@@ -19,56 +32,156 @@ let res = 1;
  * 2 - file
  */
 const loadMode = 0;
-let imageNames = [];
 let imagesLoaded = {};
-getImageNames();
 
 const textures = {
     "2.png": new Texture("2.png"),
-    "fella_animation_test.png": new Texture("fella_animation_test.png", ["2.png"]),
+    "fella_animation_test.png": new Texture("fella_animation_test.png"),
     "test": new Texture("2state_3id_base.png"),
     "ground": new Texture("og_padlo.png"),
-    "chest": new Texture("chest.png")
+    "chest": new Texture("chest.png"),
+    "undefined": Texture.null,
+    "apple": new Texture("aple.png"),
+    "shop": new Texture("shop_ig.png"),
+    "brokkoli": new Texture("brocli.png"),
+    "coin": new Texture("coinscuff.png"),
+    "brick": new Texture("brick.png"),
+    "shoe": new Texture("shoe_itsperfectXD.png"),
+    "pear": new Texture("pear.png"),
+    "slot": new Texture("invpiece_plsdupeit.png"),
+    "backpack": new Texture("lowbuget_bagpackXD.png"),
+    "sign": new Texture("npc_ig.png"),
+    "drug": new Texture("coc.png"),
+    "grass": new Texture("weath.png"),
+    "fuck": new Texture("iforgor_name_but_god_item.png"),
+    "effectbg": new Texture("x.png"),
+    "effectbglast": new Texture("x2.png"),
+    "overlay": new Texture("overlay.png")
 };
 Object.values(textures).forEach(x => x.init());
 const player = new Player(canvasSize.deved(2).floor.mult(16), 16, 1, textures["fella_animation_test.png"]);
-
+const items = {
+    "undefined": Item.null,
+    "brokkoli": new Item("Brokkoli", textures["brokkoli"], true, () => { player.healthDecreaseRate = 0.05; }, ()=>{}, 5000, 0),
+    "apple": new Item("Apple", textures["apple"], true, () => { player.hp = 100; }, ()=>{}, 5000, 0, 1),
+    "coin": new Item("Coin", textures["coin"], true, () => {}, ()=>{ player.coins++; }, 0, 0, 0),
+    "brick": new Item("Brick", textures["brick"], true, () => { player.canEat = false; }, ()=>{ player.canEat = true; }, 5000, 0, 0),
+    "shoe": new Item("Shoe", textures["shoe"], true, () => { player.canRun = false; }, ()=>{ player.canRun = true; }, 5000, 0, 0),
+    "pear": new Item("Pear", textures["pear"], true, () => { player.healthDecreaseRate = -0.05; }, ()=>{}, 3000, 1000, 1),
+    "backpack": new Item("Backpack", textures["backpack"], true, () => {}, ()=>{ player.hasBackpack = true; }, 0, 0, 0),
+    "sign": new Item("Sign", textures["sign"], true, () => { player.isBlurred = true; }, ()=>{ player.isBlurred = false; }, 3000, 0, 0),
+    "drug": new Item("Drug", textures["drug"], true, () => { player.canWalkDiagonally = true; }, ()=>{ player.canWalkDiagonally = false; }, 30000, 5000, 0),
+    "grass": new Item("Grass", textures["grass"], true, () => { player.runningMult = 3; player.speed = 3; }, ()=>{ player.kill(); }, 10000, 10000, 1),
+    "fuck": new Item("Fuck", textures["fuck"], true, () => { player.hp = 100; player.canEat = true; player.isBlurred = false; }, ()=>{}, Infinity, 0, 2),
+};
+const rareTiles = {
+    "undefined": Structure.null,
+    "brokkoli": new Structure("Brokkoli", [
+        new Tile(Vector.null, textures["ground"], items["brokkoli"])
+    ], 0.005, false),
+    "apple": new Structure("Brokkoli", [
+        new Tile(Vector.null, textures["ground"], items["apple"])
+    ], 0.0025, false),
+    "coin": new Structure("Coin", [
+        new Tile(Vector.null, textures["shop"], items["coin"])
+    ], 0.00005, false),
+    "drug": new Structure("Drug", [
+        new Tile(Vector.null, textures["shop"], items["drug"])
+    ], 0.0005, false),
+    "brick": new Structure("Brick", [
+        new Tile(Vector.null, textures["ground"], items["brick"])
+    ], 0.001, false),
+    "pear": new Structure("Pear", [
+        new Tile(Vector.null, textures["ground"], items["pear"])
+    ], 0.0025, false),
+    "shoe": new Structure("Shoe", [
+        new Tile(Vector.null, textures["ground"], items["shoe"])
+    ], 0.001, false),
+    "backpack": new Structure("Backpack", [
+        new Tile(Vector.null, textures["ground"], items["backpack"])
+    ], 0.0001, false, () => { return !player.hasBackpack; }),
+    "sign": new Structure("Sign", [
+        new Tile(Vector.null, textures["ground"], items["sign"])
+    ], 0.0001, false),
+    "grass": new Structure("Grass", [
+        new Tile(Vector.null, textures["ground"], items["grass"])
+    ], 0.0005, false),
+    "fuck": new Structure("Fuck", [
+        new Tile(Vector.null, textures["shop"], items["fuck"])
+    ], 0.000005, false),
+}
+Object.values(rareTiles).forEach((x, i) => x.id = i);
 let tiles = {};
 player.autoGenerateTiles();
 
+let cameraPos = player.pos;
+let cameraOffset = canvasSize.deved(2).mult(16);
+
+//#region Tile logic
 function DoesTileExist(pos=Vector.null) {
     if (typeof tiles[pos.y] == "undefined") return false;
     if (typeof tiles[pos.y][pos.x] == "undefined") return false;
     return true;
 }
 
+/**
+ * @param {Vector} pos position x16
+ * @returns {Tile} Vector
+ */
 function TileAt(pos=Vector.null) {
     if (typeof tiles[pos.y] == "undefined") return null;
     if (typeof tiles[pos.y][pos.x] == "undefined") return null;
     return tiles[pos.y][pos.x];
 }
 
-function GenerateNeighbourTiles(pos=Vector.null, size=16, texture=Texture.null, dist=1) {
+function GenerateNeighbourTiles(pos=Vector.null, size=16, dist=Vector.null) {
     let newTiles = [];
-    for (let i = -dist; i < dist + 1; i++) {
-        for (let y = -dist; y < dist + 1; y++) {
-            let rpos = Vector.as(i * size, y * size).added(pos);
-            let apos = pos.added(Vector.as(i * size, y * size)).rounded;
+    for (let i = -dist.x; i < dist.x + 1; i++) {
+        for (let y = -dist.y; y < dist.y + 1; y++) {
+            let apos = pos.added(Vector.as(i * size, y * size)).ceil;
             if (DoesTileExist(apos) || !apos.isDivisibleBy(size)) continue;
-            if (tiles[apos.y] == undefined) tiles[apos.y] = {};
-            tiles[apos.y][apos.x] = new Tile(apos, texture);
-            newTiles.push(rpos.self);
+            let type = TypeOfTileAt(apos);
+            tiles[apos.y] ??= {};
+            tiles[apos.y][apos.x] = new Tile(apos, textures[type]);
+            newTiles.push(apos.self);
+
+            let values = Object.values(rareTiles);
+            for (let tile of values) {
+                if (tile.canSpawnAt(apos)) {
+                    tile.generateAt(apos);
+                    if (extensiveLogging) console.log(`${tile.name} generated at ${apos}`)
+                }
+            }
         }
     }
-    if (newTiles.length > 0) console.log("New tiles generated");
+    if (newTiles.length > 0) if (extensiveLogging) console.log("New tiles generated");
     return newTiles;
 }
 
+function TypeOfTileAt(pos=Vector.null) {
+    let tileTypes = ["ground"];
+    
+    // Random seed a pozícióhoz (ha szeretnéd, hogy determinisztikus legyen)
+    let seed = (pos.x * 374761393 + pos.y * (randomf() * (9e8 - 1e8) + 1e8)) % 2147483647;
+    let r = randomSeed.seedRandom(seed)(); // vagy csak sima random() ha nem kell determinisztikus
+    
+    let n = Math.floor(r * tileTypes.length);
+    return tileTypes[n];
+}
+
+function RemoveAllTiles() {
+    Object.keys(tiles).forEach(x => delete tiles[x]);
+}
+
 function DrawShownTiles() {
-    let pos = player.pos.placeInGrid(16).mult(16);
-    ctx.rect(pos.x - player.renderDistance * 16, pos.y - player.renderDistance * 16, (player.renderDistance + 0.5) * 32, (player.renderDistance + 0.5) * 32);
-    for (let i = -player.renderDistance; i < player.renderDistance + 1; i++) {
-        for (let y = -player.renderDistance; y < player.renderDistance + 1; y++) {
+    // let pos = player.pos.placeInGrid(16).mult(16);
+    let pos = cameraPos.placeInGrid(16).mult(16);
+    /*
+    ctx.rect(pos.x - player.renderDistance.x * 16 - cameraPos.x + cameraOffset.x, pos.y - player.renderDistance.y * 16 - cameraPos.y + cameraOffset.y, 
+            (player.renderDistance.x + 0.5) * 32, (player.renderDistance.y + 0.5) * 32);
+    */
+    for (let i = -player.renderDistance.y; i < player.renderDistance.y + 1; i++) {
+        for (let y = -player.renderDistance.x; y < player.renderDistance.x + 1; y++) {
             if (tiles[pos.y + (i * 16)] === undefined || tiles[pos.y + (i * 16)][pos.x + (y * 16)] === undefined) continue;
             tiles[pos.y + (i * 16)][pos.x + (y * 16)].draw();
         }
@@ -82,13 +195,27 @@ function DrawAllTiles() {
         })
     });
 }
+//#endregion
+
+//#region Key mapping
+//#region Movement
 
 keys.bindkey("KeyW", () => {
     player.moveDirection.y += -1;
     player.lastDirPressed = Vector.up;
 }, "down");
 
+keys.bindkey("ArrowUp", () => {
+    player.moveDirection.y += -1;
+    player.lastDirPressed = Vector.up;
+}, "down")
+
 keys.bindkey("KeyS", () => {
+    player.moveDirection.y += 1;
+    player.lastDirPressed = Vector.down;
+}, "down");
+
+keys.bindkey("ArrowDown", () => {
     player.moveDirection.y += 1;
     player.lastDirPressed = Vector.down;
 }, "down");
@@ -98,52 +225,117 @@ keys.bindkey("KeyA", () => {
     player.lastDirPressed = Vector.left;
 }, "down");
 
+keys.bindkey("ArrowLeft", () => {
+    player.moveDirection.x += -1;
+    player.lastDirPressed = Vector.left;
+}, "down");
+
 keys.bindkey("KeyD", () => {
     player.moveDirection.x += 1;
     player.lastDirPressed = Vector.right;
 }, "down");
 
+keys.bindkey("ArrowRight", () => {
+    player.moveDirection.x += 1;
+    player.lastDirPressed = Vector.right;
+}, "down");
+
+keys.bindkey("ShiftLeft", () => {
+    player.toggleRunning(true);
+}, "down");
+
+keys.bindkey("ShiftLeft", () => {
+    player.toggleRunning(false);
+}, "up");
+
+keys.bindkey("ShiftRight", () => {
+    player.toggleRunning(true);
+}, "down");
+
+keys.bindkey("ShitRight", () => {
+    player.toggleRunning(false);
+}, "up");
+
+//#endregion
+//#region Game mechanincs
+keys.bindkey("Space", SpaceFunction);
+keys.bindkey("Space", SpaceOtherFunction, "press");
+keys.bindkey("KeyE", SpaceFunction);
+keys.bindkey("KeyE", SpaceOtherFunction, "press");
+keys.bindkey("KeyF", SpaceFunction);
+keys.bindkey("KeyF", SpaceOtherFunction, "press");
+keys.bindkey("KeyQ", () => { player.dropInSlot(); });
+keys.bindkey("Digit1", () => { player.scrollTo(0); }, "press");
+keys.bindkey("Digit2", () => { player.scrollTo(1); }, "press");
+keys.bindkey("Digit3", () => { player.scrollTo(2); }, "press");
+keys.bindkey("Digit4", () => { player.scrollTo(3); }, "press");
+keys.bindkey("Digit5", () => { player.scrollTo(4); }, "press");
+keys.bindkey("Digit6", () => { player.scrollTo(5); }, "press");
+keys.bindkey("Digit7", () => { player.scrollTo(6); }, "press");
+keys.bindkey("Digit8", () => { player.scrollTo(7); }, "press");
+keys.bindkey("Digit9", () => { player.scrollTo(8); }, "press");
+//#endregion
+//#region UI
+keys.bindkey("F12", ToggleScreenshot, "press");
+keys.bindkey("KeyX", ToggleScreenshot, "press");
+keys.bindkey("Escape", EscapeFunction, "press");
+//#endregion
+//#endregion
+
 function LateLoad() {
+    ToggleScreenshot();
+    keys.lockAllKeys();
     LoadCanvas();
+    LoadItems();
 
     Update();
 }
 
+let f11for = 0;
+let f11peak = -1;
+
 function Update() {
+    let rn = Date.now();
+    deltaTime = rn - lastTime;
+    lastTime = rn;
+    UpdateIsStopped();
+    if (keys.isKeyDown("AltLeft") && keys.isKeyDown("F4")) ToggleFullscreen(false);
     ReloadCanvas();
 
-    player.automove();
+    if (player.isalive && !isStopped) {
+        player.automove();
+        player.updateEffects();
+    }
 
     // textures["ground"].drawAt(Vector.null);
 
     DrawShownTiles();
 
+    player.draw();
+
     ctx.beginPath();
-    ctx.arc(mpos.x, mpos.y, 10, 0, Math.PI * 2);
+    ctx.arc(mpos.x, mpos.y, 1.6, 0, Math.PI * 2);
     ctx.stroke();
     ctx.closePath();
 
-    player.draw();
-
-
+    if (IsProllyInFullscreen() && !fullscreenMode) {
+        f11for++;
+        if (f11for > 2) {
+            fullscreenImg.src = "./imgs/fullscreenF11.png";
+            fullscreenButton.setAttribute("disabled", "");
+            f11peak = f11for;
+        }
+    } else {
+        if (f11for == f11peak) {
+            if (extensiveLogging) console.log("-fsc");
+            fullscreenImg.src = "./imgs/fullscreen.png";
+            fullscreenButton.removeAttribute("disabled");
+        }
+        f11for = 0;
+        f11peak = -1;
+    }
 
     requestAnimationFrame(Update);
-}
-
-function getImageNames() {
-    return fetch("imgs/").then(res => res.text()).then(x => {
-        let div = document.createElement("div");
-        div.innerHTML = x;
-        switch (loadMode) {
-            case 0:
-                imageNames = [...div.querySelectorAll("#files li:not(:first-child) a .name")].map(x => x.textContent);
-                break;
-            default:
-                console.error("Yeah, no.");
-                break;
-        }
-        return imageNames;
-    }).catch(e => console.warn(e));
 }
 
 function LoadCanvas() {
@@ -152,14 +344,14 @@ function LoadCanvas() {
 }
 
 function ReloadCanvas() {
-    c.width = canvasSize.x * 16 * res;
-    c.height = canvasSize.y * 16 * res;
+    c.width = canvasSize.x * 16;
+    c.height = canvasSize.y * 16;
     let x = document.documentElement.clientWidth / c.width, y = document.documentElement.clientHeight / c.height;
     let z = Math.min(x, y);
     let padding = 0.3;
     c.style.width = c.width * (z - padding) + "px";
     c.style.height = c.height * (z - padding) + "px";
-    ctx.fillStyle = "#333";
+    ctx.fillStyle = "rgb(109, 69, 62)";
     ctx.fillRect(0, 0, c.width, c.height);
 }
 
@@ -169,12 +361,174 @@ function GetTextureWithSourceImage(source="") {
     return null;
 }
 
-function ToggleFullscreen() {
-    if (document.fullscreenElement) {
-        if (document.exitFullscreen) document.exitFullscreen();
+const fullscreenImg = document.querySelector("#fullscreen img");
+const fullscreenButton = document.querySelector("#fullscreen");
+/** Don't change it, it's only for getting infos */
+let fullscreenMode = false;
+function ToggleFullscreen(bool=69) {
+    if ((document.fullscreenElement && bool != true)) {
+        if (document.exitFullscreen) {
+            fullscreenMode = false;
+            document.exitFullscreen();
+            fullscreenImg.src = "./imgs/fullscreen.png";
+        }
         else console.error("Failed exit fullscreen mode: document.exitFullscreen does not exist");
-    } else {
-        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    } else if (bool != false){
+        if (document.documentElement.requestFullscreen) {
+            fullscreenMode = true;
+            document.documentElement.requestFullscreen();
+            fullscreenImg.src = "./imgs/fullscreenClose.png";
+        }
         else console.error("Failed to enter fullscreen mode: c.requestFullscreen does not exist");
     }
+}
+
+let screenshot = "";
+let screenshotFrom = null;
+function ToggleScreenshot(scf=null, fopen=false) {
+    if (scf != null) screenshotFrom = scf;
+    const s = document.querySelector(".screenshotholder");
+    const img = document.getElementById("screenshotImage");
+    if (s.style.visibility == "hidden" || fopen) {
+        screenshot = c.toDataURL("image/png").replace("image/png", "image/octet-stream");
+        isStopped = true;
+        img.width = c.width;
+        img.height = c.height;
+        img.src = screenshot;
+        s.style.visibility = "visible";
+    }
+    else {
+        s.style.visibility = "hidden"
+        isStopped = false;
+        if (screenshotFrom != null) {
+            screenshotFrom.style.visibility = "visible";
+            screenshotFrom = null;
+        }
+    }
+}
+
+function DownloadCanvasAsImage(download=null) {
+    if (download == Infinity) {
+        download = screenshot;
+    }
+    let link = document.createElement("a");
+    link.setAttribute("download", "droggy_screenshot_" + Date.now() + ".png");
+    link.setAttribute("href", download != null ? download : c.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+    link.click();
+}
+
+const sholder = document.querySelector(".screenshotholder");
+function EscapeFunction() {
+    if (getComputedStyle(escMenuHolder).visibility == "visible") ToggleEscMenu();
+    else if (getComputedStyle(dpHolder).visibility == "visible") ToggleDroggopedia();
+    else if (getComputedStyle(sholder).visibility == "visible") ToggleScreenshot();
+    else ToggleEscMenu();
+}
+
+function SpaceFunction() {
+    if (player.isalive && !isStopped) player.useInSlot();
+}
+function SpaceOtherFunction() {
+    if (player.isalive && !isStopped) return;
+    if (getComputedStyle(escMenuHolder).visibility == "visible") ToggleEscMenu();
+    else if (isStopped) Respawn();
+}
+
+function IsProllyInFullscreen() {
+    return screen.height <= window.innerHeight;
+}
+
+/**
+ * Spawns the given item at the given location
+ * @param {Vector} pos in grid
+ * @param {Item} item the item
+ */
+function SpawnItemAt(pos=Vector.null, item=Item.null, override=false) {
+    let tile = TileAt(pos.placeInGrid(16).mult(16).rounded);
+    if (tile == null) {
+        console.warn(`No tile in position '${pos}', thus adding an item to it failed`);
+        return 1;
+    }
+    if (override) tile.setItem(item);
+    else tile.addItem(item);
+}
+
+function RegenerateMapWithRandomSeed() {
+    randomSeed.reloadRandomWithSeed(Math.random() * Date.now());
+    RemoveAllTiles();
+    player.generateTiles();
+}
+
+function Zoom(n=1) {
+    canvasSize.mult(n);
+    cameraOffset.mult(n);
+}
+
+const dholder = document.querySelector(".deathHolder");
+function Death() {
+    if (getComputedStyle(dholder).visibility == "hidden") {
+        document.getElementById("deathCount").textContent = player.totalStuffEaten;
+        dholder.style.visibility = "visible";
+    } else {
+        dholder.style.visibility = "hidden";
+    }
+}
+
+function Respawn(force=true) {
+    RegenerateMapWithRandomSeed();
+    if (force) Death();
+    player.reset();
+}
+
+let isEscMenuOpen = false;
+const escMenuHolder = document.querySelector(".escMenuHolder");
+function ToggleEscMenu() {
+    if (getComputedStyle(escMenuHolder).visibility == "hidden") {
+        escMenuHolder.style.visibility = "visible";
+    } else {
+        escMenuHolder.style.visibility = "hidden";
+    }
+}
+
+function UpdateIsStopped() {
+    isStopped = getComputedStyle(escMenuHolder).visibility == "visible" ||
+                getComputedStyle(sholder).visibility == "visible" ||
+                getComputedStyle(dholder).visibility == "visible" ||
+                getComputedStyle(dpHolder).visibility == "visible";
+}
+
+const dpHolder = document.querySelector(".droggopediaHolder");
+let dpFrom = null;
+function ToggleDroggopedia(dp=null) {
+    if (dp != null) dpFrom = dp;
+    if (getComputedStyle(dpHolder).visibility == "hidden") {
+        dpHolder.style.visibility = "visible";
+    } else {
+        dpHolder.style.visibility = "hidden";
+        if (dpFrom != null) {
+            dpFrom.style.visibility = "visible";
+            dpFrom = null;
+        }
+    }
+}
+
+function LoadItems() {
+    const place = document.querySelector("body > div.droggopediaHolder > div > div.items");
+    place.innerHTML = "";
+    Object.values(items).forEach(x => {
+        if (!x || !player.eaten.has(x.name)) return;
+        let div = document.createElement("div");
+        if (extensiveLogging) console.log(x);
+        div.innerHTML = `<h2><img src="./imgs/${x.texture.source}"><span text="${x.name}Item"></span></h2><p text="${x.name}"></p>`;
+        div.className = "item";
+        place.appendChild(div);
+    });
+    LanguageManager.reloadLanguage();
+}
+
+function FullRestart() {
+    Respawn(false);
+    player.eaten.clear();
+    LoadItems();
+    escMenuHolder.style.visibility = "hidden";
 }
